@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Scraped Links</title>
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css" integrity="sha384-xOolHFLEh07PJGoPkLv1IbcEPTNtaed2xpHsD9ESMhqIYd0nLMwNLD69Npy4HI+N" crossorigin="anonymous">
+</head>
+<body>
+    <div class="container">
+
+        <div class="row">
+            <div class="col-md-12 m-5"><h1>Link Collector</h1></div>
+        </div>    
+
+        <div class="row m-5">
+            <div class="col-md-4">
+                <form method="post" action="/">
+                    {% csrf_token %}
+                    <div class="form-group">
+                        <label for="site">Enter Site URL:</label>
+                        <input type="text" class="form-control" id="site" name="site" placeholder="Enter the site address" required>
+                    </div>
+            </div>
+            <div class="col-md-1">
+                    <button type="submit" class="btn btn-primary">Scrape</button>
+            </div>
+                </form>
+            <div class="col-md-6">
+                <a class="btn btn-warning" href="/delete">Delete</a>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-8">
+                <table class="table">
+  <thead class="thead-dark">
+    <tr>
+      <th scope="col">ID</th>
+      <th scope="col">Name</th>
+      <th scope="col">Address</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for link in data %}
+    <tr>
+      <!-- <td>{{link.id}}</td> -->
+       <td>{{ link.id }}</td>
+      <td>{{link.name}}</td>
+      <td>{{link.address}}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
