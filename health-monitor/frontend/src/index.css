@@ -1,0 +1,15 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-white: #FEFFFF;
+  --color-brand-dark: #0462C4;
+  --color-brand-light: #6095D0;
+
+  --color-status-up: #10b981;
+  --color-status-down: #ef4444;
+  --color-status-degraded: #f59e0b;
+}
+
+body {
+  @apply bg-gray-50 text-gray-900;
+}
