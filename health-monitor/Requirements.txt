@@ -1,0 +1,59 @@
+structured requirements checklist now is far cheaper than discovering a gap mid-build. Here's the full list, organized by domain so you can route each section to the right team member (infra, security, AD/IT, business stakeholders).
+
+🔐 1. Authentication & Authorization
+Azure AD (cloud/Entra ID) or classic on-prem AD (LDAP)?
+Is there an existing App Registration in Azure AD for internal tools, or does this need a net-new registration (and who owns creating it — you, or central IT)?
+Should user roles (Admin/Editor/Viewer) map to existing AD security groups, or be managed independently inside the app?
+Does the app need to support any non-AD users at all (e.g., a service account for automated integrations), or is 100% of access via AD?
+Session timeout policy — does IT mandate a specific idle/absolute session timeout for internal tools?
+Is MFA already enforced at the AD/Azure level (so the app inherits it), or does the app need to handle anything MFA-related itself?
+☁️ 2. Infrastructure & Hosting
+Is AWS confirmed as the target, or is Azure more likely given the AD/Entra usage (many orgs on Azure AD host on Azure, not AWS — worth explicitly confirming, not assuming)?
+Is there an existing AWS/Azure landing zone, VPC, and account structure this app must deploy into, or is infra being provisioned fresh for this project?
+Who owns infra provisioning — your team, a platform/DevOps team, or a third party? (Affects whether I should hand you Terraform/CDK or just guidance.)
+Any mandated compliance framework (SOC 2, HIPAA, internal InfoSec policy) that dictates encryption-at-rest, logging retention, or network isolation requirements?
+Is this app expected to run in a private network only (VPN/internal-only access), or does it need public internet exposure?
+🗄️ 3. Database & Data Retention
+Expected number of applications to monitor at launch, and realistic 12-month growth (directly affects HealthCheckLog volume and whether partitioning/archiving is needed early)?
+Any data retention policy — how long should HealthCheckLog history be kept before archiving/deleting?
+Is PostgreSQL version pinned by your org's standards, or is latest stable acceptable?
+Does IT require the database backup/DR strategy to meet a specific RPO/RTO?
+📧 4. Email & Alerting
+Is Amazon SES approved for use, or does your org require routing through an existing corporate SMTP relay/Exchange server instead?
+Is a single team distribution list sufficient for all alerts, or should alerting be per-application/per-team (as flagged earlier)?
+Should alerts also go to Slack/Microsoft Teams in addition to (or instead of) email? (Given AD/Entra, Teams is the more likely fit than Slack — worth confirming.)
+What's the expected alert volume tolerance — should there be throttling/deduplication beyond the "only alert on DOWN transition" logic already built in?
+⏱️ 5. Monitoring Behavior
+What's the expected check frequency range across applications — uniform (e.g., every 5 min for all) or per-app configurable as currently modeled?
+Should health checks support authenticated endpoints (apps requiring an API key/bearer token to even hit the health check URL), or are all endpoints assumed publicly reachable from wherever Celery runs?
+Do any target applications require checks from inside a private network/VPC that the monitoring service must also sit in (network reachability matters a lot for Celery worker placement)?
+Is a simple HTTP GET/HEAD "is it up" check sufficient, or do any applications need deeper checks (e.g., hitting a /health endpoint that validates DB connectivity, expecting a specific JSON response body)?
+📥 6. Excel Ingestion
+Who are the expected uploaders, and how often — occasional manual backfill, or a regular recurring process (which might later warrant automating via S3 + scheduled ingestion instead of manual UI upload)?
+Is the column schema I used in ExcelIngestionService (application_name, record_type, etc.) acceptable, or does your team already have an existing spreadsheet template/format from another tool that this needs to match instead?
+Should uploaded files be retained (e.g., in S3) for audit purposes after processing, or is it fine to discard the raw file once ingested?
+📊 7. Dashboard & Incident Workflow (business logic, not infra)
+Confirming from earlier: should Dashboard KPIs reflect only automated Celery ping data, or also incorporate Excel-uploaded HealthCheckLog rows?
+Should a Celery-detected DOWN event automatically create an Incident record, or should Incidents remain a purely curated/uploaded log?
+Who is authorized to mark an incident RESOLVED — anyone with Editor access, or does resolution require a specific role/approval step?
+🔗 8. Integration & Environments
+Are there existing enterprise tools this should integrate with or avoid duplicating — e.g., is there already a ServiceNow/Jira/PagerDuty instance that incidents should sync to instead of (or alongside) this system's own Incident table?
+How many environments are needed — Dev/QA/Prod for this app itself (separate from the "environment" field on monitored applications), and does each need its own AD app registration/AWS account?
+Is there an existing CI/CD pipeline standard (Jenkins, GitHub Actions, Azure DevOps) your team must use, or is that open?
+🔒 9. Security & Compliance
+Any requirement for penetration testing or security review before production launch, and who runs it?
+Secrets management — is AWS Secrets Manager/SSM acceptable, or does your org mandate a specific vault (e.g., HashiCorp Vault, Azure Key Vault)?
+Any PII/sensitive data concerns in the error_message or description fields (e.g., stack traces accidentally containing customer data) that need scrubbing/redaction rules?
+How I'd suggest using this list
+
+Group these by owner before you circulate:
+
+AD/IT Security team: Questions 1–6, 33–35
+Infra/Platform team: Questions 7–11, 15
+Your application stakeholders (business side): Questions 12–14, 16–19, 27–29
+Application owners being monitored: Questions 20–23
+Whoever currently tracks incidents today: Questions 24–26, 30
+
+You don't need every single answer before we start backend work — most of Section 3 (database), 5 (monitoring behavior), and 6 (Excel ingestion) can proceed with reasonable defaults now and get adjusted later without major rework. The ones that genuinely block architecture decisions if left unanswered are 1–3 (auth model), 7 (AWS vs Azure), and 30 (integration with an existing incident tool) — those three would change fairly deep parts of the design if answered differently, so I'd prioritize getting those back first.
+
+
